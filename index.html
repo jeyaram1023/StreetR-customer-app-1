@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>StreetR – Customer</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+    <div class="app-container">
+        <header class="app-header">
+            <h1 id="header-title">StreetR</h1>
+        </header>
+
+        <main class="app-body">
+            <div id="email-page" class="page active">
+                <img src="https://via.placeholder.com/120?text=StreetR" alt="App Logo" class="app-logo">
+                <h2>Welcome to StreetR!</h2>
+                <p>Your Favorite Foods, Snacks & Juices – Delivered with a Smile!</p>
+                <input type="email" id="user-email" placeholder="Enter your email" required>
+                <button id="send-otp-btn">Send OTP</button>
+            </div>
+
+            <div id="otp-page" class="page">
+                <img src="https://via.placeholder.com/150?text=OTP" alt="OTP Illustration" class="page-image">
+                <p>Enter the 6-digit PIN sent to your email.</p>
+                <input type="text" id="otp-input" maxlength="6" inputmode="numeric" placeholder="------">
+                <button id="verify-otp-btn">Verify & Proceed</button>
+            </div>
+
+            <div id="personal-data-page" class="page">
+                <h2>Your Information</h2>
+                <p>This helps us deliver your order accurately.</p>
+                <input type="text" id="customer-name" placeholder="Full Name*">
+                <input type="tel" id="mobile-number" placeholder="Mobile Number*">
+                <input type="text" id="street-name" placeholder="Street Name, Area*">
+                <input type="text" id="nearby-landmark" placeholder="Nearby Landmark (Optional)">
+                <input type="text" id="district" placeholder="District*">
+                <input type="text" id="state" placeholder="State*">
+                <input type="text" id="pincode" placeholder="Pincode*" inputmode="numeric">
+                <button id="save-details-btn">Save & Continue</button>
+            </div>
+
+            <div id="lets-go-page" class="page">
+                <h2>Confirm Your Details</h2>
+                <div id="confirm-details-summary"></div>
+                <button id="edit-details-btn">Edit Details</button>
+                <button id="lets-go-btn">Everything's Correct, Let's Go!</button>
+            </div>
+
+            <div id="home-page" class="page">
+                <div class="search-bar-container">
+                    <input type="search" id="search-input" placeholder="Search for food, snacks...">
+                    <button id="qr-scanner-btn" class="icon-btn"><i class="material-icons">qr_code_scanner</i></button>
+                </div>
+                <h3 class="section-title">Popular Items</h3>
+                <div id="popular-items-container" class="item-grid"></div>
+                <h3 class="section-title">All Available Items</h3>
+                <div id="all-items-container" class="item-grid"></div>
+            </div>
+
+            <div id="item-detail-page" class="page"></div>
+
+            <div id="orders-page" class="page">
+                <h2 class="page-title">My Orders</h2>
+                <div id="orders-list-container"></div>
+                <div id="map-container" style="height: 250px; background-color: #e0e0e0; text-align: center; padding-top: 100px;">Live Map Placeholder</div>
+            </div>
+
+            <div id="cart-page" class="page">
+                <h2 class="page-title">My Cart</h2>
+                <div id="cart-items-container"></div>
+                <div class="cart-summary-footer">
+                    <h3>Total: ₹<span id="cart-total-price">0.00</span></h3>
+                    <button id="order-now-btn">Proceed to Payment</button>
+                </div>
+            </div>
+
+            <div id="more-page" class="page">
+                <h2 class="page-title">More For You</h2>
+                <button class="more-category-btn">Groceries</button>
+                <button class="more-category-btn">Dairy</button>
+                <button class="more-category-btn">Pooja Shop</button>
+            </div>
+            
+            <div id="coming-soon-page" class="page">
+                <h2 class="page-title">Coming Soon!</h2>
+                <p>This feature is under construction. We're working hard to bring it to you soon.</p>
+                <button id="back-to-main-btn">Back</button>
+            </div>
+
+            <div id="profile-page" class="page">
+                <h2 class="page-title">My Profile</h2>
+                <div class="profile-form">
+                    <label for="profile-name">Name</label>
+                    <input type="text" id="profile-name">
+                    <label for="profile-address">Address</label>
+                    <textarea id="profile-address" rows="3"></textarea>
+                    <label for="profile-email">Email (Cannot be changed)</label>
+                    <input type="email" id="profile-email" readonly>
+                    <label for="profile-mobile">Mobile (Cannot be changed)</label>
+                    <input type="tel" id="profile-mobile" readonly>
+                    <button id="update-profile-btn">Update Profile</button>
+                    <button id="help-btn" class="secondary-btn">Help & Support</button>
+                    <button id="logout-btn" class="danger-btn">Logout</button>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <nav class="bottom-nav">
+                <button data-page="home-page" class="nav-btn active"><i class="material-icons">home</i></button>
+                <button data-page="orders-page" class="nav-btn"><i class="material-icons">receipt_long</i></button>
+                <button data-page="cart-page" class="nav-btn"><i class="material-icons">shopping_cart</i></button>
+                <button data-page="more-page" class="nav-btn"><i class="material-icons">more_horiz</i></button>
+                <button data-page="profile-page" class="nav-btn"><i class="material-icons">person</i></button>
+            </nav>
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="js_superbase.js"></script>
+    <script src="js_auth.js"></script>
+    <script src="js_profile.js"></script>
+    <script src="js_home.js"></script>
+    <script src="js_search_filter.js"></script>
+    <script src="js_qr_scanner.js"></script>
+    <script src="js_add_to_cart.js"></script>
+    <script src="js_order.js"></script>
+    <script src="js_payment.js"></script>
+    <script src="js_map.js"></script>
+    <script src="js_notification.js"></script>
+    <script src="js_main.js"></script>
+</body>
+</html>
