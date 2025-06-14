@@ -1,0 +1,109 @@
+-- SQL for StreetR App on Supabase
+
+-- 1. Create Sellers Table
+CREATE TABLE sellers (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    shop_name TEXT NOT NULL,
+    profile_photo_url TEXT,
+    location TEXT,
+    pincode TEXT NOT NULL,
+    ratings NUMERIC(2, 1) DEFAULT 0.0
+);
+
+-- 2. Create Items Table
+CREATE TABLE items (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    seller_id UUID REFERENCES sellers(id) ON DELETE CASCADE NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    price NUMERIC(10, 2) NOT NULL,
+    image_url TEXT,
+    category TEXT,
+    is_available BOOLEAN DEFAULT true,
+    like_count INT DEFAULT 0
+);
+
+-- 3. Create Profiles Table (for Customers)
+-- This table is managed by Supabase Auth. We add public profile data here.
+CREATE TABLE profiles (
+    id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+    email TEXT UNIQUE,
+    name TEXT,
+    mobile TEXT,
+    address_street TEXT,
+    address_landmark TEXT,
+    address_district TEXT,
+    address_state TEXT,
+    address_pincode TEXT,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now())
+);
+
+-- Function to automatically create a profile when a new user signs up
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email)
+  VALUES (new.id, new.email);
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger to execute the function on new user creation
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 4. Create Likes Table (to track which user liked which item)
+CREATE TABLE likes (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    item_id UUID REFERENCES items(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()),
+    UNIQUE(user_id, item_id) -- A user can only like an item once
+);
+
+-- 5. Create Orders Table
+CREATE TABLE orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    total_price NUMERIC(10, 2) NOT NULL,
+    status TEXT NOT NULL DEFAULT 'Pending', -- e.g., Pending, Confirmed, Out for Delivery, Delivered, Canceled
+    delivery_address JSONB,
+    payment_id TEXT -- From Razorpay
+);
+
+-- 6. Create Order Items Table (Junction table for Orders and Items)
+CREATE TABLE order_items (
+    id BIGSERIAL PRIMARY KEY,
+    order_id UUID REFERENCES orders(id) ON DELETE CASCADE NOT NULL,
+    item_id UUID REFERENCES items(id) ON DELETE RESTRICT NOT NULL, -- Don't delete item if it's in an order
+    quantity INT NOT NULL,
+    price_per_item NUMERIC(10, 2) NOT NULL
+);
+
+-- Enable Row Level Security (RLS) for all tables
+-- IMPORTANT: This is a critical security step for Supabase
+ALTER TABLE sellers ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS Policies (Examples - you must define these based on your app's logic)
+-- Policy: Users can see all sellers and items
+CREATE POLICY "Allow public read access to sellers and items" ON sellers FOR SELECT USING (true);
+CREATE POLICY "Allow public read access to items" ON items FOR SELECT USING (true);
+
+-- Policy: Users can view their own profile and update it
+CREATE POLICY "Allow individual read access to profiles" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Allow individual update access to profiles" ON profiles FOR UPDATE USING (auth.uid() = id);
+
+-- Policy: Users can manage their own likes, orders, and order items
+CREATE POLICY "Allow individual access to likes" ON likes FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Allow individual access to orders" ON orders FOR ALL USING (auth.uid() = user_id);
+CREATE POLICY "Allow access to order_items based on order ownership" ON order_items FOR ALL
+    USING ( (SELECT user_id FROM orders WHERE id = order_id) = auth.uid() );
