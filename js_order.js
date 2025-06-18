@@ -1,74 +1,97 @@
 // js_order.js
-async function createOrder(paymentId) {
-    const user = supabase.auth.user();
-    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-    
-    const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single();
-    const delivery_address = { ...profile }; // Copy full profile as address
+const ordersListDiv = document.getElementById('orders-list');
 
-    const { data: newOrder, error: orderError } = await supabase
-        .from('orders')
-        .insert([{ user_id: user.id, total_price: total, payment_id: paymentId, delivery_address: delivery_address }])
-        .select()
-        .single();
-    
-    if (orderError) {
-        console.error("Error creating order:", orderError);
-        return null;
-    }
-
-    const orderItems = cart.map(item => ({
-        order_id: newOrder.id,
-        item_id: item.id,
-        quantity: item.quantity,
-        price_per_item: item.price
-    }));
-
-    const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-
-    if (itemsError) {
-        console.error("Error saving order items:", itemsError);
-        // Here you might need logic to delete the created order if items fail to save
-        return null;
-    }
-
-    cart = []; // Clear cart
-    saveCart();
-    updateCartDisplay();
-    return newOrder;
-}
-
-async function loadOrders() {
-    const container = document.getElementById('orders-list-container');
-    container.innerHTML = '<p>Loading your orders...</p>';
-    const user = supabase.auth.user();
-
-    const { data, error } = await supabase
-        .from('orders')
-        .select(`*, order_items(quantity, items(name, image_url))`)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-    if (error) {
-        console.error("Error fetching orders:", error);
-        container.innerHTML = '<p>Could not load orders.</p>';
+async function createOrder() {
+    const cart = getCart();
+    if (cart.length === 0) {
+        alert("Your cart is empty.");
         return;
     }
 
-    container.innerHTML = '';
-    data.forEach(order => {
-        const orderEl = document.createElement('div');
-        orderEl.className = 'order-summary';
-        // Display simplified order info. A click could show more details.
-        orderEl.innerHTML = `
-            <div>
-                <h4>Order on ${new Date(order.created_at).toLocaleDateString()}</h4>
-                <p>Status: <strong>${order.status}</strong></p>
-                <p>Total: ₹${order.total_price.toFixed(2)}</p>
+    if (!window.currentUser || !window.userProfile) {
+        alert("You must be logged in to place an order.");
+        return;
+    }
+
+    showLoader();
+
+    try {
+        // In a real app, you might have multiple sellers in one cart.
+        // This simple version assumes all items are from the same seller for simplicity.
+        const sellerId = cart[0].seller_id; 
+        const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
+        const orderData = {
+            seller_id: sellerId,
+            customer_id: window.currentUser.id,
+            customer_name: window.userProfile.full_name,
+            customer_contact: window.userProfile.mobile_number,
+            order_details: { items: cart }, // Storing items array in JSONB
+            total_amount: totalAmount,
+            [span_0](start_span)status: 'Pending' // Default status[span_0](end_span)
+        };
+
+        const { error } = await supabase.from('orders').insert(orderData);
+
+        if (error) throw error;
+
+        alert("Order placed successfully!");
+        saveCart([]); // Clear the cart
+        navigateToPage('main-app-view', 'orders-page-content');
+        loadOrders();
+
+    } catch (error) {
+        console.error("Error creating order:", error);
+        alert(`Failed to place order: ${error.message}`);
+    } finally {
+        hideLoader();
+    }
+}
+
+async function loadOrders() {
+    if (!window.currentUser) return;
+    showLoader();
+    
+    try {
+        const { data, error } = await supabase
+            .from('orders')
+            .select('*')
+            .eq('customer_id', window.currentUser.id)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        renderOrders(data);
+
+    } catch (error) {
+        console.error("Error fetching orders:", error);
+        ordersListDiv.innerHTML = '<p>Could not load your orders.</p>';
+    } finally {
+        hideLoader();
+    }
+}
+
+function renderOrders(orders) {
+    ordersListDiv.innerHTML = '';
+    if (!orders || orders.length === 0) {
+        ordersListDiv.innerHTML = "<p>You haven't placed any orders yet.</p>";
+        return;
+    }
+
+    orders.forEach(order => {
+        const orderDiv = document.createElement('div');
+        orderDiv.className = 'order-item';
+        let itemsHtml = order.order_details.items.map(item => `<li>${item.name} (Qty: ${item.quantity})</li>`).join('');
+
+        orderDiv.innerHTML = `
+            <p><strong>Order ID:</strong> ${order.id.substring(0, 8)}</p>
+            <p><strong>Total:</strong> ₹${order.total_amount.toFixed(2)}</p>
+            <p><strong>Status:</strong> ${order.status}</p>
+            <ul>${itemsHtml}</ul>
+            <small>Placed on: ${new Date(order.created_at).toLocaleString()}</small>
+            <div class="live-tracking-placeholder">
+                <p>Live tracking map will be integrated here.</p>
             </div>
         `;
-        container.appendChild(orderEl);
+        ordersListDiv.appendChild(orderDiv);
     });
 }
-// Add listener to load orders when the orders page is shown
-document.querySelector('[data-page="orders-page"]').addEventListener('click', loadOrders);
