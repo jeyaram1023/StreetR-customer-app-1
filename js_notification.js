@@ -1,21 +1,41 @@
 // js_notification.js
-// NOTE: Push notifications require a service worker (e.g., sw.js) and a secure context (HTTPS).
 
-function requestNotificationPermission() {
+const popup1 = document.getElementById('notification-popup-1');
+const popup2 = document.getElementById('notification-popup-2');
+
+function showPopUpNotifications() {
+    // Show first popup after 2 seconds
+    setTimeout(() => {
+        popup1?.classList.remove('hidden');
+    }, 2000);
+
+    // Show second popup after 5 seconds
+    setTimeout(() => {
+        popup2?.classList.remove('hidden');
+    }, 5000);
+
+    // Add event listeners to close buttons
+    document.querySelectorAll('.close-popup-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.target.closest('.popup-notification').classList.add('hidden');
+        });
+    });
+}
+
+function requestPushNotifications() {
     if ('Notification' in window) {
         Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                console.log('Notification permission granted.');
-                // Here you would get the push subscription and save it to the user's profile in Supabase
-                // This allows you to send notifications from your backend.
+            if (permission === "granted") {
+                console.log("Notification permission granted.");
+                // In a real app, you would now get the FCM token and save it to the user's profile
             } else {
-                console.warn('Notification permission denied.');
+                console.log("Notification permission denied.");
             }
         });
     } else {
-        console.error('This browser does not support desktop notification');
+        console.log("This browser does not support notifications.");
     }
 }
 
-// Ask for permission on first load after profile setup
-document.getElementById('lets-go-btn').addEventListener('click', requestNotificationPermission);
+// Example of how to call it (e.g., after user logs in)
+// requestPushNotifications();
